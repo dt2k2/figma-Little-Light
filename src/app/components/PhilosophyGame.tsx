@@ -278,7 +278,30 @@ const DEFAULT_LEADERBOARD: LeaderboardEntry[] = [
   { id: 'd5', codename: 'PhilosophyGeek', score: 6100, time: 85.2, date: '2026-06-22' }
 ];
 
-const getLeaderboardData = (): LeaderboardEntry[] => {
+// DÁN URL API GOOGLE SHEETS CỦA BẠN VÀO ĐÂY (Ví dụ từ SheetDB, Stein, hoặc Google Apps Script Web App)
+const GOOGLE_SHEET_API_URL = "";
+
+const getLeaderboardData = async (apiUrl?: string): Promise<LeaderboardEntry[]> => {
+  if (apiUrl) {
+    try {
+      const response = await fetch(apiUrl);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          return data.map((item: any) => ({
+            id: String(item.id || item.ID || ''),
+            codename: String(item.codename || item.Codename || ''),
+            score: Number(item.score || item.Score || 0),
+            time: Number(item.time || item.Time || 0),
+            date: String(item.date || item.Date || '')
+          })).sort((a, b) => b.score - a.score || a.time - b.time);
+        }
+      }
+    } catch (e) {
+      console.error("Lỗi khi tải bảng xếp hạng trực tuyến:", e);
+    }
+  }
+
   if (typeof window === 'undefined') return DEFAULT_LEADERBOARD;
   const stored = localStorage.getItem('philosophy_leaderboard');
   if (!stored) {
@@ -394,7 +417,7 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
       setShowLeaderboard(false);
       setFinalScore(0);
       setFinalTime(0);
-      setLeaderboard(getLeaderboardData());
+      getLeaderboardData(GOOGLE_SHEET_API_URL).then(data => setLeaderboard(data));
     }
   }, [isOpen]);
 
@@ -589,15 +612,34 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
       isPlayer: true
     };
 
-    const currentLeaderboard = getLeaderboardData();
-    const sanitizedLeaderboard = currentLeaderboard.map(item => ({ ...item, isPlayer: false }));
-    const updated = [...sanitizedLeaderboard, newEntry].sort((a, b) => b.score - a.score || a.time - b.time);
-    
-    saveLeaderboardData(updated);
-    setLeaderboard(updated);
+    // Save locally first to show immediate feedback
+    const localData = [...leaderboard.map(item => ({ ...item, isPlayer: false })), newEntry]
+      .sort((a, b) => b.score - a.score || a.time - b.time);
+    setLeaderboard(localData);
     setIsScoreSubmitted(true);
     setShowLeaderboard(true);
     addLog(`Đã gửi điểm đặc vụ thành công: ${playerCodename.trim()} - ${finalScore} điểm.`);
+
+    // If Google Sheet API URL is configured, push to Google Sheets
+    if (GOOGLE_SHEET_API_URL) {
+      const isSheetDB = GOOGLE_SHEET_API_URL.includes('sheetdb.io');
+      const payload = isSheetDB ? { data: [newEntry] } : newEntry;
+
+      fetch(GOOGLE_SHEET_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => {
+        if (res.ok) {
+          // Re-fetch online leaderboard to sync all players' scores
+          getLeaderboardData(GOOGLE_SHEET_API_URL).then(onlineData => setLeaderboard(onlineData));
+        }
+      })
+      .catch(err => console.error("Lỗi gửi điểm lên Google Sheets:", err));
+    } else {
+      saveLeaderboardData(localData);
+    }
   };
 
   return (
