@@ -261,6 +261,42 @@ const level3Questions: QuizQuestion[] = [
   }
 ];
 
+interface LeaderboardEntry {
+  id: string;
+  codename: string;
+  score: number;
+  time: number;
+  date: string;
+  isPlayer?: boolean;
+}
+
+const DEFAULT_LEADERBOARD: LeaderboardEntry[] = [
+  { id: 'd1', codename: 'Agent_Marx', score: 9200, time: 38.5, date: '2026-06-20' },
+  { id: 'd2', codename: 'Agent_Lenin', score: 8950, time: 42.1, date: '2026-06-21' },
+  { id: 'd3', codename: 'Light_AI_Buster', score: 8100, time: 55.0, date: '2026-06-22' },
+  { id: 'd4', codename: 'Neo_Materialist', score: 7250, time: 68.4, date: '2026-06-22' },
+  { id: 'd5', codename: 'PhilosophyGeek', score: 6100, time: 85.2, date: '2026-06-22' }
+];
+
+const getLeaderboardData = (): LeaderboardEntry[] => {
+  if (typeof window === 'undefined') return DEFAULT_LEADERBOARD;
+  const stored = localStorage.getItem('philosophy_leaderboard');
+  if (!stored) {
+    localStorage.setItem('philosophy_leaderboard', JSON.stringify(DEFAULT_LEADERBOARD));
+    return DEFAULT_LEADERBOARD;
+  }
+  try {
+    return JSON.parse(stored);
+  } catch (e) {
+    return DEFAULT_LEADERBOARD;
+  }
+};
+
+const saveLeaderboardData = (data: LeaderboardEntry[]) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('philosophy_leaderboard', JSON.stringify(data));
+};
+
 export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
   const [stage, setStage] = useState<GameStage>('welcome');
   const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
@@ -285,6 +321,17 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
   const [s3ShowResult, setS3ShowResult] = useState<boolean>(false);
   const [s3Attempts, setS3Attempts] = useState<number>(3); // health
 
+  // Scoring and Leaderboard State variables
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const [errorCount, setErrorCount] = useState<number>(0);
+  const [playerCodename, setPlayerCodename] = useState<string>('');
+  const [isScoreSubmitted, setIsScoreSubmitted] = useState<boolean>(false);
+  const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
+  const [finalScore, setFinalScore] = useState<number>(0);
+  const [finalTime, setFinalTime] = useState<number>(0);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+
   const logsEndRef = useRef<HTMLDivElement | null>(null);
 
   // Log messages handler
@@ -297,6 +344,22 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [consoleLogs]);
+
+  // Timer ticking effect
+  useEffect(() => {
+    let interval: any;
+    if (stage === 'stage1' || stage === 'stage2' || stage === 'stage3') {
+      if (!startTime) {
+        setStartTime(Date.now());
+      }
+      interval = setInterval(() => {
+        setElapsedTime((prev) => prev + 0.1);
+      }, 100);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [stage, startTime]);
 
   useEffect(() => {
     if (isOpen) {
@@ -321,6 +384,17 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
       setS3SelectedOption(null);
       setS3ShowResult(false);
       setS3Attempts(3);
+
+      // Reset leaderboard & timer variables
+      setStartTime(null);
+      setElapsedTime(0);
+      setErrorCount(0);
+      setPlayerCodename('');
+      setIsScoreSubmitted(false);
+      setShowLeaderboard(false);
+      setFinalScore(0);
+      setFinalTime(0);
+      setLeaderboard(getLeaderboardData());
     }
   }, [isOpen]);
 
@@ -370,6 +444,7 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
       }
     } else {
       playSynthSound('error');
+      setErrorCount((prev) => prev + 1);
       setS1ErrorMsg(`Phân tích lỗi: Mệnh đề không thuộc nhóm ${targetCategory === 'matter' ? 'Vật chất quyết định' : 'Ý thức tác động ngược lại'}. Thử lại!`);
       addLog(`Thất bại: Mệnh đề "${s1ActiveCard.text.slice(0, 20)}..." xếp sai danh mục.`);
     }
@@ -427,6 +502,7 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
       }
     } else {
       playSynthSound('error');
+      setErrorCount((prev) => prev + 1);
       setS2Error(true);
       addLog(`Khớp lệnh sai: Khối logic bị từ chối kết nối.`);
       setTimeout(() => {
@@ -458,7 +534,14 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
         setS3SelectedOption(null);
       } else {
         // WIN GAME!
+        const totalTime = Number(elapsedTime.toFixed(1));
+        setFinalTime(totalTime);
+        const computedScore = Math.max(0, 10000 - Math.floor(totalTime * 20) - (errorCount * 250) + (s3Attempts * 500));
+        setFinalScore(computedScore);
+
         addLog("QUÁ TRÌNH GỠ LỖI HOÀN TẤT 100%!");
+        addLog(`Kết quả: Thời gian ${totalTime}s, Lỗi: ${errorCount}, Mạng: ${s3Attempts}`);
+        addLog(`Điểm số đạt được: ${computedScore} ĐIỂM.`);
         addLog("Lõi Logic Light AI được khôi phục thành công.");
         setTimeout(() => {
           playSynthSound('win');
@@ -467,6 +550,7 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
       }
     } else {
       playSynthSound('error');
+      setErrorCount((prev) => prev + 1);
       const newAttempts = s3Attempts - 1;
       setS3Attempts(newAttempts);
       addLog(`Câu hỏi ${s3QuestionIndex + 1}: Sai lệch dữ liệu! Lõi AI quá tải.`);
@@ -489,6 +573,31 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
   const handleRestartAll = () => {
     playSynthSound('click');
     setStage('welcome');
+  };
+
+  const handleScoreSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!playerCodename.trim()) return;
+
+    playSynthSound('success');
+    const newEntry: LeaderboardEntry = {
+      id: `player_${Date.now()}`,
+      codename: playerCodename.trim(),
+      score: finalScore,
+      time: finalTime,
+      date: new Date().toISOString().split('T')[0],
+      isPlayer: true
+    };
+
+    const currentLeaderboard = getLeaderboardData();
+    const sanitizedLeaderboard = currentLeaderboard.map(item => ({ ...item, isPlayer: false }));
+    const updated = [...sanitizedLeaderboard, newEntry].sort((a, b) => b.score - a.score || a.time - b.time);
+    
+    saveLeaderboardData(updated);
+    setLeaderboard(updated);
+    setIsScoreSubmitted(true);
+    setShowLeaderboard(true);
+    addLog(`Đã gửi điểm đặc vụ thành công: ${playerCodename.trim()} - ${finalScore} điểm.`);
   };
 
   return (
@@ -538,11 +647,25 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
               <div ref={logsEndRef} />
             </div>
             {stage !== 'welcome' && stage !== 'success' && stage !== 'gameover' && (
-              <div className="mt-3 pt-2 border-t border-emerald-500/20 text-xs flex justify-between items-center text-emerald-500/80">
-                <span>Trạng thái: </span>
-                <span className="font-bold text-emerald-400 uppercase animate-pulse">
-                  {stage === 'stage1' ? 'Vật chất & Ý thức' : stage === 'stage2' ? 'Ghép Quy luật' : 'Câu hỏi Tối hậu'}
-                </span>
+              <div className="mt-3 pt-2 border-t border-emerald-500/20 text-xs space-y-2 text-emerald-500/80">
+                <div className="flex justify-between items-center">
+                  <span>Trạng thái: </span>
+                  <span className="font-bold text-emerald-400 uppercase">
+                    {stage === 'stage1' ? 'Vật chất & Ý thức' : stage === 'stage2' ? 'Ghép Quy luật' : 'Câu hỏi Tối hậu'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center border-t border-emerald-500/10 pt-1.5">
+                  <span>Thời gian:</span>
+                  <span className="font-mono text-white font-bold text-sm tracking-wide animate-pulse">
+                    {elapsedTime.toFixed(1)}s
+                  </span>
+                </div>
+                <div className="flex justify-between items-center border-t border-emerald-500/10 pt-1.5">
+                  <span>Lỗi phân tích:</span>
+                  <span className={`font-mono font-bold text-xs ${errorCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                    {errorCount}
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -560,30 +683,83 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
                   exit={{ opacity: 0, y: -10 }}
                   className="flex flex-col items-center justify-center text-center h-full max-w-xl mx-auto space-y-6"
                 >
-                  <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.2)] animate-pulse">
-                    <Cpu className="w-10 h-10 text-emerald-400" />
-                  </div>
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-bold tracking-tight text-white">DƯ QUANG: CHỐNG CHỈ ĐỊNH LOGIC</h2>
-                    <p className="text-sm text-gray-400 leading-relaxed">
-                      Lõi xử lý của siêu máy tính Light AI đang bị ngập trong các vòng lặp nghịch lý logic. Để khởi động lại hệ thống, bạn cần vượt qua 3 tường lửa xác thực đại diện cho các nguyên lý tối cao của **Triết học Mác - Lênin**.
-                    </p>
-                  </div>
+                  {showLeaderboard ? (
+                    <div className="w-full bg-[#080d12]/95 border border-emerald-500/30 rounded p-4 text-emerald-400 space-y-4 shadow-[0_0_20px_rgba(16,185,129,0.1)] relative z-10 max-h-[350px] overflow-y-auto scrollbar-thin scrollbar-thumb-emerald-500/20">
+                      <div className="text-xs border-b border-emerald-500/20 pb-2 font-bold uppercase tracking-wider text-center text-white">
+                        BẢNG XẾP HẠNG ĐẶC VỤ GIẢI MÃ
+                      </div>
+                      
+                      <table className="w-full text-xs text-left font-mono">
+                        <thead>
+                          <tr className="border-b border-emerald-500/20 text-emerald-500">
+                            <th className="py-1 px-1 text-center">HẠNG</th>
+                            <th className="py-1 px-2">MẬT DANH</th>
+                            <th className="py-1 px-2 text-right">THỜI GIAN</th>
+                            <th className="py-1 px-2 text-right">ĐIỂM SỐ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {leaderboard.slice(0, 10).map((entry, idx) => (
+                            <tr key={entry.id} className="border-b border-emerald-500/10 last:border-0 hover:bg-emerald-500/5 text-emerald-400/90">
+                              <td className="py-1.5 px-1 text-center font-bold">
+                                {idx === 0 ? '🏆 1' : idx === 1 ? '🥈 2' : idx === 2 ? '🥉 3' : idx + 1}
+                              </td>
+                              <td className="py-1.5 px-2 truncate max-w-[120px] text-emerald-300">
+                                {entry.codename}
+                              </td>
+                              <td className="py-1.5 px-2 text-right">{entry.time.toFixed(1)}s</td>
+                              <td className="py-1.5 px-2 text-right text-yellow-400 font-bold">
+                                {entry.score.toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      
+                      <button
+                        onClick={() => { playSynthSound('click'); setShowLeaderboard(false); }}
+                        className="w-full py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded text-xs font-bold uppercase transition-colors"
+                      >
+                        Quay lại Trình Welcome
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.2)] animate-pulse">
+                        <Cpu className="w-10 h-10 text-emerald-400" />
+                      </div>
+                      <div className="space-y-2">
+                        <h2 className="text-2xl font-bold tracking-tight text-white">DƯ QUANG: CHỐNG CHỈ ĐỊNH LOGIC</h2>
+                        <p className="text-sm text-gray-400 leading-relaxed">
+                          Lõi xử lý của siêu máy tính Light AI đang bị ngập trong các vòng lặp nghịch lý logic. Để khởi động lại hệ thống, bạn cần vượt qua 3 tường lửa xác thực đại diện cho các nguyên lý tối cao của **Triết học Mác - Lênin**.
+                        </p>
+                      </div>
 
-                  <div className="w-full text-left bg-emerald-950/20 border border-emerald-500/20 rounded p-4 text-xs text-emerald-400/90 space-y-1">
-                    <div className="font-semibold text-white mb-1 uppercase">Các giao diện gỡ lỗi cần vượt qua:</div>
-                    <div>1. Phân định lưỡng cực: Vật chất quyết định hay Ý thức phản hồi.</div>
-                    <div>2. Ma trận kết nối: Ghép Quy luật Biện chứng với hình thức vận động.</div>
-                    <div>3. Bẻ khóa Kinh tế chính trị: Tính toán Giá trị thặng dư & Quy luật CSHT/KTTT.</div>
-                  </div>
+                      <div className="w-full text-left bg-emerald-950/20 border border-emerald-500/20 rounded p-4 text-xs text-emerald-400/90 space-y-1">
+                        <div className="font-semibold text-white mb-1 uppercase">Các giao diện gỡ lỗi cần vượt qua:</div>
+                        <div>1. Phân định lưỡng cực: Vật chất quyết định hay Ý thức phản hồi.</div>
+                        <div>2. Ma trận kết nối: Ghép Quy luật Biện chứng với hình thức vận động.</div>
+                        <div>3. Bẻ khóa Kinh tế chính trị: Tính toán Giá trị thặng dư & Quy luật CSHT/KTTT.</div>
+                      </div>
 
-                  <button
-                    onClick={handleStartGame}
-                    className="w-full max-w-xs px-6 py-3 rounded text-base font-bold flex items-center justify-center gap-2 transition-all duration-300 hover:scale-[1.02] active:scale-95 bg-emerald-500 hover:bg-emerald-400 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]"
-                  >
-                    <Play className="w-5 h-5 fill-current" />
-                    <span>Nạp Tác Vụ Giải Mã</span>
-                  </button>
+                      <div className="flex gap-3 w-full">
+                        <button
+                          onClick={handleStartGame}
+                          className="flex-1 px-6 py-3 rounded text-base font-bold flex items-center justify-center gap-2 transition-all duration-300 hover:scale-[1.02] active:scale-95 bg-emerald-500 hover:bg-emerald-400 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+                        >
+                          <Play className="w-5 h-5 fill-current" />
+                          <span>Nạp Tác Vụ</span>
+                        </button>
+                        <button
+                          onClick={() => { playSynthSound('click'); setShowLeaderboard(true); }}
+                          className="flex-1 px-4 py-3 rounded text-xs font-bold border border-emerald-500/30 text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10 flex items-center justify-center gap-1.5 transition-all duration-300 hover:scale-[1.02]"
+                        >
+                          <Award className="w-4 h-4" />
+                          <span>Bảng Xếp Hạng</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </motion.div>
               )}
 
@@ -891,35 +1067,132 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
                     </p>
                   </div>
 
-                  {/* Certificate box */}
-                  <div className="w-full bg-[#080d12]/95 border border-emerald-500/30 rounded p-6 text-emerald-400 space-y-4 shadow-[0_0_20px_rgba(16,185,129,0.1)] relative z-10">
-                    <div className="text-xs border-b border-emerald-500/20 pb-2 font-bold uppercase tracking-wider text-center text-white">
-                      CHỨNG CHỈ XÁC THỰC LOGIC TRIẾT HỌC MÁC-LÊNIN
-                    </div>
-                    
-                    <div className="text-xs space-y-2 text-left">
-                      <div className="flex justify-between">
-                        <span className="text-emerald-600">ĐẶC VỤ GIẢI MÃ:</span>
-                        <span className="text-white font-bold">AI DECRYPTION AGENT</span>
+                  {/* Conditional: Certificate vs Leaderboard */}
+                  {!showLeaderboard ? (
+                    <div className="w-full bg-[#080d12]/95 border border-emerald-500/30 rounded p-6 text-emerald-400 space-y-4 shadow-[0_0_20px_rgba(16,185,129,0.1)] relative z-10">
+                      <div className="text-xs border-b border-emerald-500/20 pb-2 font-bold uppercase tracking-wider text-center text-white">
+                        CHỨNG CHỈ XÁC THỰC LOGIC TRIẾT HỌC MÁC-LÊNIN
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-emerald-600">PHƯƠNG PHÁP LUẬN:</span>
-                        <span className="text-white">Duy vật Biện chứng & Lịch sử</span>
+                      
+                      <div className="text-xs space-y-2 text-left">
+                        <div className="flex justify-between">
+                          <span className="text-emerald-600">ĐẶC VỤ GIẢI MÃ:</span>
+                          <span className="text-white font-bold uppercase">{playerCodename.trim() || "AI DECRYPTION AGENT"}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-emerald-600">PHƯƠNG PHÁP LUẬN:</span>
+                          <span className="text-white">Duy vật Biện chứng & Lịch sử</span>
+                        </div>
+                        <div className="flex justify-between border-t border-emerald-500/10 pt-2">
+                          <span className="text-emerald-600">THỜI GIAN HOÀN THÀNH:</span>
+                          <span className="text-white font-bold">{finalTime.toFixed(1)} giây</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-emerald-600">SỐ LỖI PHÂN TÍCH:</span>
+                          <span className={`font-bold ${errorCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{errorCount} lần</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-emerald-600">ĐIỂM HIỆU SUẤT LÕI:</span>
+                          <span className="text-yellow-400 font-bold">{finalScore.toLocaleString()} ĐIỂM</span>
+                        </div>
+                        <div className="flex justify-between border-t border-emerald-500/10 pt-2">
+                          <span className="text-emerald-600">MÃ KHÓA KÍCH HOẠT:</span>
+                          <span className="text-yellow-400 font-bold bg-yellow-950/20 px-2 py-0.5 rounded border border-yellow-500/20 uppercase">
+                            ML_DECRYPT_{finalScore}_{Math.floor(finalTime)}S
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-emerald-600">MÃ KHÓA KÍCH HOẠT:</span>
-                        <span className="text-yellow-400 font-bold bg-yellow-950/20 px-2 py-0.5 rounded border border-yellow-500/20">
-                          MARX_LENIN_DECRYPT_SUCCESS_2026
-                        </span>
-                      </div>
-                    </div>
 
-                    <div className="text-[11px] text-emerald-500/80 text-center leading-relaxed">
-                      "Ý thức không chỉ phản ánh thế giới khách quan, mà còn sáng tạo ra thế giới khách quan thông qua hoạt động thực tiễn cải tạo cách mạng."
+                      <div className="text-[11px] text-emerald-500/80 text-center leading-relaxed">
+                        "Ý thức không chỉ phản ánh thế giới khách quan, mà còn sáng tạo ra thế giới khách quan thông qua hoạt động thực tiễn cải tạo cách mạng."
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="w-full bg-[#080d12]/95 border border-emerald-500/30 rounded p-4 text-emerald-400 space-y-3 shadow-[0_0_20px_rgba(16,185,129,0.1)] relative z-10 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-emerald-500/20">
+                      <div className="text-xs border-b border-emerald-500/20 pb-2 font-bold uppercase tracking-wider text-center text-white">
+                        BẢNG XẾP HẠNG ĐẶC VỤ GIẢI MÃ
+                      </div>
+                      
+                      <table className="w-full text-xs text-left font-mono">
+                        <thead>
+                          <tr className="border-b border-emerald-500/20 text-emerald-500">
+                            <th className="py-1 px-1 text-center">HẠNG</th>
+                            <th className="py-1 px-2">MẬT DANH</th>
+                            <th className="py-1 px-2 text-right">THỜI GIAN</th>
+                            <th className="py-1 px-2 text-right">ĐIỂM SỐ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {leaderboard.slice(0, 10).map((entry, idx) => {
+                            const isSelf = entry.isPlayer || (isScoreSubmitted && entry.codename === playerCodename.trim() && entry.score === finalScore);
+                            return (
+                              <tr 
+                                key={entry.id} 
+                                className={`border-b border-emerald-500/10 last:border-0 ${
+                                  isSelf 
+                                  ? 'bg-emerald-500/15 text-white font-bold' 
+                                  : 'hover:bg-emerald-500/5 text-emerald-400/90'
+                                }`}
+                              >
+                                <td className="py-1.5 px-1 text-center font-bold">
+                                  {idx === 0 ? '🏆 1' : idx === 1 ? '🥈 2' : idx === 2 ? '🥉 3' : idx + 1}
+                                </td>
+                                <td className="py-1.5 px-2 flex items-center gap-1.5 truncate max-w-[120px]">
+                                  <span className={isSelf ? 'text-white' : 'text-emerald-300'}>
+                                    {entry.codename}
+                                  </span>
+                                  {isSelf && <span className="text-[9px] bg-emerald-500 text-black px-1 rounded font-sans uppercase">Bạn</span>}
+                                </td>
+                                <td className="py-1.5 px-2 text-right">{entry.time.toFixed(1)}s</td>
+                                <td className={`py-1.5 px-2 text-right ${isSelf ? 'text-yellow-300' : 'text-yellow-400 font-bold'}`}>
+                                  {entry.score.toLocaleString()}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                      
+                      <div className="text-[9px] text-emerald-500/60 text-center italic border-t border-emerald-500/10 pt-1">
+                        Cập nhật thời gian thực trên bộ nhớ cục bộ.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Highscore entry form (only if not submitted and showing certificate) */}
+                  {!isScoreSubmitted && !showLeaderboard && (
+                    <div className="w-full bg-[#080d12]/95 border border-emerald-500/30 rounded p-4 text-emerald-400 space-y-3 shadow-[0_0_20px_rgba(16,185,129,0.1)] relative z-10">
+                      <div className="text-xs font-bold uppercase tracking-wider text-center text-white">
+                        GHI DANH VÀO BẢNG XẾP HẠNG ĐẶC VỤ
+                      </div>
+                      <form onSubmit={handleScoreSubmit} className="flex gap-2">
+                        <input
+                          type="text"
+                          required
+                          maxLength={15}
+                          value={playerCodename}
+                          onChange={(e) => setPlayerCodename(e.target.value)}
+                          placeholder="NHẬP MẬT DANH ĐẶC VỤ..."
+                          className="flex-1 bg-[#0b1016] border border-emerald-500/40 rounded px-3 py-2 text-xs font-mono text-emerald-400 placeholder-emerald-700/60 focus:outline-none focus:border-emerald-400"
+                        />
+                        <button
+                          type="submit"
+                          className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs px-4 py-2 rounded font-mono transition-all duration-200"
+                        >
+                          GỬI ĐIỂM
+                        </button>
+                      </form>
+                    </div>
+                  )}
 
                   <div className="flex gap-3 w-full z-10">
+                    <button
+                      onClick={() => { playSynthSound('click'); setShowLeaderboard(!showLeaderboard); }}
+                      className="flex-1 py-2.5 rounded text-xs font-bold border border-emerald-500/30 text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10 flex items-center justify-center gap-1.5 transition-all"
+                    >
+                      <Award className="w-4 h-4" />
+                      <span>{showLeaderboard ? "Xem Chứng Chỉ" : "Bảng Xếp Hạng"}</span>
+                    </button>
                     <button
                       onClick={handleRestartAll}
                       className="flex-1 py-2.5 rounded text-xs font-bold border border-emerald-500/30 text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10 flex items-center justify-center gap-1.5 transition-all"
