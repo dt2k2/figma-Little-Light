@@ -1,6 +1,10 @@
-import { Star, Calendar, User, Building2 } from 'lucide-react';
+import { Star, Calendar, User, Building2, Play } from 'lucide-react';
 
-export function Hero() {
+interface HeroProps {
+  onPlayGame: () => void;
+}
+
+export function Hero({ onPlayGame }: HeroProps) {
   return (
     <div 
       className="relative pt-8 pb-20 px-6"
@@ -73,9 +77,23 @@ export function Hero() {
         </div>
         
         {/* CTA Buttons */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <button 
-            className="px-8 py-3 rounded transition-all hover:scale-105"
+            onClick={onPlayGame}
+            className="px-8 py-3 rounded flex items-center gap-2 transition-all hover:scale-105 hover:shadow-[0_0_15px_rgba(91,163,43,0.6)] cursor-pointer"
+            style={{
+              background: 'linear-gradient(90deg, var(--steam-green) 0%, #4a8a23 100%)',
+              color: 'white',
+              boxShadow: '0 2px 8px rgba(91, 163, 43, 0.3)',
+              fontWeight: '600'
+            }}
+          >
+            <Play className="w-4 h-4 fill-current" />
+            <span>Chơi Demo Triết Học 🎮</span>
+          </button>
+          
+          <button 
+            className="px-8 py-3 rounded transition-all hover:scale-105 cursor-pointer"
             style={{
               background: 'linear-gradient(90deg, var(--steam-blue) 0%, var(--steam-blue-hover) 100%)',
               color: 'white',
@@ -85,7 +103,7 @@ export function Hero() {
             Add to Wishlist
           </button>
           <button 
-            className="px-8 py-3 rounded border transition-all hover:opacity-80"
+            className="px-8 py-3 rounded border transition-all hover:opacity-80 cursor-pointer"
             style={{
               backgroundColor: 'var(--steam-card-bg)',
               borderColor: 'var(--steam-border)',
@@ -99,3 +117,4 @@ export function Hero() {
     </div>
   );
 }
+

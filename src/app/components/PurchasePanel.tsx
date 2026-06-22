@@ -1,8 +1,12 @@
-import { ShoppingCart, Heart, Share2, Monitor } from 'lucide-react';
+import { ShoppingCart, Heart, Share2, Monitor, Play } from 'lucide-react';
 
 const tags = ['Mystery', 'Detective', 'AI', 'ARG', 'Story-Rich', 'Singleplayer'];
 
-export function PurchasePanel() {
+interface PurchasePanelProps {
+  onPlayGame: () => void;
+}
+
+export function PurchasePanel({ onPlayGame }: PurchasePanelProps) {
   return (
     <div className="sticky top-20">
       <div className="rounded-lg overflow-hidden" style={{
@@ -55,7 +59,7 @@ export function PurchasePanel() {
           
           {/* Action Buttons */}
           <div className="space-y-2">
-            <button className="w-full px-4 py-3 rounded flex items-center justify-center gap-2 transition-all hover:scale-[1.02]" style={{
+            <button className="w-full px-4 py-3 rounded flex items-center justify-center gap-2 transition-all hover:scale-[1.02] cursor-pointer" style={{
               background: 'linear-gradient(90deg, var(--steam-green) 0%, #4a8a23 100%)',
               color: 'white',
               boxShadow: '0 2px 8px rgba(91, 163, 43, 0.3)'
@@ -65,7 +69,7 @@ export function PurchasePanel() {
             </button>
             
             <div className="flex gap-2">
-              <button className="flex-1 px-4 py-2.5 rounded flex items-center justify-center gap-2 border transition-colors hover:opacity-80" style={{
+              <button className="flex-1 px-4 py-2.5 rounded flex items-center justify-center gap-2 border transition-colors hover:opacity-80 cursor-pointer" style={{
                 backgroundColor: 'var(--steam-hover-bg)',
                 borderColor: 'var(--steam-border)',
                 color: 'var(--steam-text-primary)'
@@ -73,7 +77,7 @@ export function PurchasePanel() {
                 <Heart className="w-4 h-4" />
                 <span className="text-sm">Wishlist</span>
               </button>
-              <button className="px-4 py-2.5 rounded border transition-colors hover:opacity-80" style={{
+              <button className="px-4 py-2.5 rounded border transition-colors hover:opacity-80 cursor-pointer" style={{
                 backgroundColor: 'var(--steam-hover-bg)',
                 borderColor: 'var(--steam-border)',
                 color: 'var(--steam-text-primary)'
@@ -81,7 +85,19 @@ export function PurchasePanel() {
                 <Share2 className="w-4 h-4" />
               </button>
             </div>
+
+            <button 
+              onClick={onPlayGame}
+              className="w-full px-4 py-2.5 rounded flex items-center justify-center gap-2 border transition-all hover:scale-[1.02] hover:border-emerald-500/50 hover:bg-emerald-500/5 cursor-pointer text-emerald-400 font-semibold"
+              style={{
+                borderColor: 'var(--steam-border)',
+              }}
+            >
+              <Play className="w-4 h-4 text-emerald-400 fill-emerald-400" />
+              <span className="text-sm">Chơi Demo Triết Học 🎮</span>
+            </button>
           </div>
+
           
           {/* Platform */}
           <div className="pt-4 border-t" style={{ borderColor: 'var(--steam-border)' }}>
