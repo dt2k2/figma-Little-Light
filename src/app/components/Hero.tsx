@@ -30,7 +30,7 @@ export function Hero({ onPlayGame }: HeroProps) {
           letterSpacing: '-0.02em',
           lineHeight: '1.1'
         }}>
-          Dư Quang (Lingering Light / Afterglow)
+          Mật Mã Biện Chứng (The Dialectical Code)
         </h1>
         
         {/* Tagline */}
@@ -39,7 +39,7 @@ export function Hero({ onPlayGame }: HeroProps) {
           color: 'var(--steam-text-secondary)',
           maxWidth: '600px'
         }}>
-          Uncover the truth in a world where artificial intelligence blurs the line between reality and simulation
+          Enter the digital mainframe of Light AI, where philosophy is the code and dialectics is the ultimate compiler
         </p>
         
         {/* Meta Info */}

@@ -59,7 +59,7 @@ export function ContentSections() {
           About This Game
         </h2>
         <p className="leading-relaxed" style={{ color: 'var(--steam-text-secondary)' }}>
-          Step into the shoes of a detective in a world where the line between human intelligence and artificial intelligence has become dangerously blurred. Dư Quang (Lingering Light / Afterglow) is a narrative-driven mystery game that challenges you to solve crimes using cutting-edge AI technology while uncovering a conspiracy that reaches beyond the game itself.
+          Step into the shoes of a detective in a world where the line between human intelligence and artificial intelligence has become dangerously blurred. Mật Mã Biện Chứng (The Dialectical Code) is a narrative-driven mystery game that challenges you to solve cognitive logic loops using cutting-edge AI technology and philosophical decryption.
           <br /><br />
           As you investigate increasingly complex cases, you'll discover that your AI assistant might know more than it's letting on. Every choice matters, every clue counts, and the truth you uncover could change everything you thought you knew about reality.
         </p>

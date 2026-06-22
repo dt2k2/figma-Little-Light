@@ -18,7 +18,7 @@ export function PurchasePanel({ onPlayGame }: PurchasePanelProps) {
         <div className="aspect-[3/4] w-full relative">
           <img
             src="https://images.unsplash.com/photo-1694855801642-cf7e422bfd95?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxnYW1pbmclMjBjeWJlcnB1bmslMjBteXN0ZXJpb3VzfGVufDF8fHx8MTc2OTYxODY3MXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-            alt="Dư Quang Cover"
+            alt="Mật Mã Biện Chứng Cover"
             className="w-full h-full object-cover"
           />
           {/* Discount Badge */}

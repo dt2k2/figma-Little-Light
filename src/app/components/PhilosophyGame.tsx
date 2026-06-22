@@ -365,7 +365,7 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
     if (isOpen) {
       setStage('welcome');
       setConsoleLogs([]);
-      addLog("Hệ thống Dư Quang khởi động...");
+      addLog("Hệ thống Mật Mã Biện Chứng khởi động...");
       addLog("Đang kiểm tra bảo mật của Trí tuệ Nhân tạo Light AI...");
       addLog("CẢNH BÁO: Lõi Logic của Light AI đang bị quá tải do mâu thuẫn nhận thức.");
       addLog("Yêu cầu Đặc vụ kết nối bộ lọc Triết học Mác - Lênin để gỡ lỗi!");
@@ -729,7 +729,7 @@ export function PhilosophyGame({ isOpen, onClose }: PhilosophyGameProps) {
                         <Cpu className="w-10 h-10 text-emerald-400" />
                       </div>
                       <div className="space-y-2">
-                        <h2 className="text-2xl font-bold tracking-tight text-white">DƯ QUANG: CHỐNG CHỈ ĐỊNH LOGIC</h2>
+                        <h2 className="text-2xl font-bold tracking-tight text-white">MẬT MÃ BIỆN CHỨNG: CHỐNG CHỈ ĐỊNH LOGIC</h2>
                         <p className="text-sm text-gray-400 leading-relaxed">
                           Lõi xử lý của siêu máy tính Light AI đang bị ngập trong các vòng lặp nghịch lý logic. Để khởi động lại hệ thống, bạn cần vượt qua 3 tường lửa xác thực đại diện cho các nguyên lý tối cao của **Triết học Mác - Lênin**.
                         </p>
